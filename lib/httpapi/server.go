@@ -201,13 +201,7 @@ func (s *Server) createMessage(ctx context.Context, input *MessageRequest) (*Mes
 
 	switch input.Body.Type {
 	case MessageTypeUser:
-		var msgParts []st.MessagePart
-		switch s.agentType {
-		case mf.AgentTypeOpenCode:
-			msgParts = FormatMessageForOpenCode(input.Body.Content)
-		default:
-			msgParts = FormatMessage(s.agentType, input.Body.Content)
-		}
+		msgParts := FormatMessage(s.agentType, input.Body.Content)
 		if err := s.conversation.SendMessage(msgParts...); err != nil {
 			return nil, xerrors.Errorf("failed to send message: %w", err)
 		}
