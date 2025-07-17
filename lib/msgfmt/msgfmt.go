@@ -193,11 +193,12 @@ func trimEmptyLines(message string) string {
 type AgentType string
 
 const (
-	AgentTypeClaude AgentType = "claude"
-	AgentTypeGoose  AgentType = "goose"
-	AgentTypeAider  AgentType = "aider"
-	AgentTypeCodex  AgentType = "codex"
-	AgentTypeCustom AgentType = "custom"
+	AgentTypeClaude   AgentType = "claude"
+	AgentTypeGoose    AgentType = "goose"
+	AgentTypeAider    AgentType = "aider"
+	AgentTypeCodex    AgentType = "codex"
+	AgentTypeOpenCode AgentType = "opencode"
+	AgentTypeCustom   AgentType = "custom"
 )
 
 func formatGenericMessage(message string, userInput string) string {
@@ -216,6 +217,8 @@ func FormatAgentMessage(agentType AgentType, message string, userInput string) s
 	case AgentTypeAider:
 		return formatGenericMessage(message, userInput)
 	case AgentTypeCodex:
+		return formatGenericMessage(message, userInput)
+	case AgentTypeOpenCode:
 		return formatGenericMessage(message, userInput)
 	case AgentTypeCustom:
 		return formatGenericMessage(message, userInput)

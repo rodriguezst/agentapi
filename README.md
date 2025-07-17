@@ -1,6 +1,6 @@
 # AgentAPI
 
-Control [Claude Code](https://github.com/anthropics/claude-code), [Goose](https://github.com/block/goose), [Aider](https://github.com/Aider-AI/aider), and [Codex](https://github.com/openai/codex) with an HTTP API.
+Control [Claude Code](https://github.com/anthropics/claude-code), [Goose](https://github.com/block/goose), [Aider](https://github.com/Aider-AI/aider), [Codex](https://github.com/openai/codex), and [OpenCode](https://github.com/sst/opencode) with an HTTP API.
 
 ![agentapi-chat](https://github.com/user-attachments/assets/57032c9f-4146-4b66-b219-09e38ab7690d)
 
@@ -58,11 +58,12 @@ Run an HTTP server that lets you control an agent. If you'd like to start an age
 agentapi server -- claude --allowedTools "Bash(git*) Edit Replace"
 ```
 
-You may also use `agentapi` to run the Aider and Goose agents:
+You may also use `agentapi` to run the Aider, Goose, and OpenCode agents:
 
 ```bash
 agentapi server -- aider --model sonnet --api-key anthropic=sk-ant-apio3-XXX
 agentapi server -- goose
+agentapi server -- opencode
 ```
 
 An OpenAPI schema is available in [openapi.json](openapi.json).
@@ -118,7 +119,7 @@ AgentAPI automatically removes these.
 - For user input, we strip the lines that contain the text from the user's last message.
 - For the input box, we look for lines at the end of the message that contain common TUI elements, like `>` or `------`.
 
-### What will happen when Claude Code, Goose, Aider, or Codex update their TUI?
+### What will happen when Claude Code, Goose, Aider, Codex, or OpenCode update their TUI?
 
 Splitting the terminal output into a sequence of messages should still work, since it doesn't depend on the TUI structure. The logic for removing extra bits may need to be updated to account for new elements. AgentAPI will still be usable, but some extra TUI elements may become visible in the agent messages.
 

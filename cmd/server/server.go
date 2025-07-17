@@ -30,11 +30,12 @@ var (
 type AgentType = msgfmt.AgentType
 
 const (
-	AgentTypeClaude AgentType = msgfmt.AgentTypeClaude
-	AgentTypeGoose  AgentType = msgfmt.AgentTypeGoose
-	AgentTypeAider  AgentType = msgfmt.AgentTypeAider
-	AgentTypeCodex  AgentType = msgfmt.AgentTypeCodex
-	AgentTypeCustom AgentType = msgfmt.AgentTypeCustom
+	AgentTypeClaude   AgentType = msgfmt.AgentTypeClaude
+	AgentTypeGoose    AgentType = msgfmt.AgentTypeGoose
+	AgentTypeAider    AgentType = msgfmt.AgentTypeAider
+	AgentTypeCodex    AgentType = msgfmt.AgentTypeCodex
+	AgentTypeOpenCode AgentType = msgfmt.AgentTypeOpenCode
+	AgentTypeCustom   AgentType = msgfmt.AgentTypeCustom
 )
 
 func parseAgentType(firstArg string, agentTypeVar string) (AgentType, error) {
@@ -50,6 +51,8 @@ func parseAgentType(firstArg string, agentTypeVar string) (AgentType, error) {
 		agentType = AgentTypeCustom
 	case string(AgentTypeCodex):
 		agentType = AgentTypeCodex
+	case string(AgentTypeOpenCode):
+		agentType = AgentTypeOpenCode
 	case "":
 		// do nothing
 	default:
@@ -68,6 +71,8 @@ func parseAgentType(firstArg string, agentTypeVar string) (AgentType, error) {
 		agentType = AgentTypeAider
 	case string(AgentTypeCodex):
 		agentType = AgentTypeCodex
+	case string(AgentTypeOpenCode):
+		agentType = AgentTypeOpenCode
 	default:
 		agentType = AgentTypeCustom
 	}
@@ -137,7 +142,7 @@ func runServer(ctx context.Context, logger *slog.Logger, argsToPass []string) er
 var ServerCmd = &cobra.Command{
 	Use:   "server [agent]",
 	Short: "Run the server",
-	Long:  `Run the server with the specified agent (claude, goose, aider, codex)`,
+	Long:  `Run the server with the specified agent (claude, goose, aider, codex, opencode)`,
 	Args:  cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
@@ -150,7 +155,7 @@ var ServerCmd = &cobra.Command{
 }
 
 func init() {
-	ServerCmd.Flags().StringVarP(&agentTypeVar, "type", "t", "", "Override the agent type (one of: claude, goose, aider, custom)")
+	ServerCmd.Flags().StringVarP(&agentTypeVar, "type", "t", "", "Override the agent type (one of: claude, goose, aider, codex, opencode, custom)")
 	ServerCmd.Flags().IntVarP(&port, "port", "p", 3284, "Port to run the server on")
 	ServerCmd.Flags().BoolVarP(&printOpenAPI, "print-openapi", "P", false, "Print the OpenAPI schema to stdout and exit")
 	ServerCmd.Flags().StringVarP(&chatBasePath, "chat-base-path", "c", "/chat", "Base path for assets and routes used in the static files of the chat interface")
