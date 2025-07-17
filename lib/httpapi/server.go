@@ -71,7 +71,7 @@ func NewServer(ctx context.Context, agentType mf.AgentType, process *termexec.Pr
 	router.Use(corsMiddleware.Handler)
 
 	humaConfig := huma.DefaultConfig("AgentAPI", "0.2.3")
-	humaConfig.Info.Description = "HTTP API for Claude Code, Goose, and Aider.\n\nhttps://github.com/coder/agentapi"
+	humaConfig.Info.Description = "HTTP API for Claude Code, Goose, Aider, OpenCode, and Codex.\n\nhttps://github.com/coder/agentapi"
 	api := humachi.New(router, humaConfig)
 	formatMessage := func(message string, userInput string) string {
 		return mf.FormatAgentMessage(agentType, message, userInput)
@@ -201,7 +201,14 @@ func (s *Server) createMessage(ctx context.Context, input *MessageRequest) (*Mes
 
 	switch input.Body.Type {
 	case MessageTypeUser:
-		if err := s.conversation.SendMessage(FormatMessage(s.agentType, input.Body.Content)...); err != nil {
+		var msgParts []st.MessagePart
+		switch s.agentType {
+		case mf.AgentTypeOpenCode:
+			msgParts = FormatMessageForOpenCode(input.Body.Content)
+		default:
+			msgParts = FormatMessage(s.agentType, input.Body.Content)
+		}
+		if err := s.conversation.SendMessage(msgParts...); err != nil {
 			return nil, xerrors.Errorf("failed to send message: %w", err)
 		}
 	case MessageTypeRaw:
