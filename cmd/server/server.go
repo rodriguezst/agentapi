@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
@@ -15,6 +16,7 @@ import (
 	"github.com/coder/agentapi/lib/httpapi"
 	"github.com/coder/agentapi/lib/logctx"
 	"github.com/coder/agentapi/lib/msgfmt"
+	"github.com/coder/agentapi/lib/opencode"
 	"github.com/coder/agentapi/lib/termexec"
 )
 
@@ -93,6 +95,11 @@ func runServer(ctx context.Context, logger *slog.Logger, argsToPass []string) er
 		return xerrors.Errorf("term height must be at least 10")
 	}
 
+	// Handle OpenCode differently - use REST API instead of TUI
+	if agentType == AgentTypeOpenCode {
+		return runOpenCodeServer(ctx, logger, argsToPass)
+	}
+
 	var process *termexec.Process
 	if printOpenAPI {
 		process = nil
@@ -134,6 +141,62 @@ func runServer(ctx context.Context, logger *slog.Logger, argsToPass []string) er
 	select {
 	case err := <-processExitCh:
 		return xerrors.Errorf("agent exited with error: %w", err)
+	default:
+	}
+	return nil
+}
+
+func runOpenCodeServer(ctx context.Context, logger *slog.Logger, argsToPass []string) error {
+	// Find an available port for OpenCode server
+	openCodePort := port + 1000 // Use a different port to avoid conflicts
+	
+	// Create and start OpenCode service
+	service := opencode.NewService(logger, openCodePort)
+	
+	if printOpenAPI {
+		// For OpenAPI spec, we don't need to start the actual service
+		srv := httpapi.NewServer(ctx, AgentTypeOpenCode, nil, port, chatBasePath)
+		fmt.Println(srv.GetOpenAPI())
+		return nil
+	}
+	
+	if err := service.Start(ctx); err != nil {
+		return xerrors.Errorf("failed to start OpenCode service: %w", err)
+	}
+	defer service.Stop()
+	
+	// Create OpenCode conversation
+	conv, err := opencode.NewConversation(ctx, service.Client(), logger)
+	if err != nil {
+		return xerrors.Errorf("failed to create OpenCode conversation: %w", err)
+	}
+	
+	// Create server with OpenCode conversation adapter
+	srv := httpapi.NewOpenCodeServer(ctx, conv, port, chatBasePath, logger)
+	
+	logger.Info("Starting AgentAPI server with OpenCode backend", "port", port, "opencode_port", openCodePort)
+	
+	// Handle graceful shutdown
+	serviceExitCh := make(chan error, 1)
+	go func() {
+		defer close(serviceExitCh)
+		for service.IsRunning() {
+			time.Sleep(1 * time.Second)
+		}
+		serviceExitCh <- nil
+	}()
+	
+	// Start the server
+	if err := srv.Start(); err != nil && err != context.Canceled && err != http.ErrServerClosed {
+		return xerrors.Errorf("failed to start server: %w", err)
+	}
+	
+	select {
+	case err := <-serviceExitCh:
+		if err != nil {
+			return xerrors.Errorf("OpenCode service exited with error: %w", err)
+		}
+		return nil
 	default:
 	}
 	return nil
