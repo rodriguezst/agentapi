@@ -63,8 +63,10 @@ You may also use `agentapi` to run the Aider, Goose, and OpenCode agents:
 ```bash
 agentapi server -- aider --model sonnet --api-key anthropic=sk-ant-apio3-XXX
 agentapi server -- goose
-agentapi server -- opencode
+agentapi server -- opencode  # Uses REST API integration
 ```
+
+> **Note**: OpenCode uses a different integration approach. Instead of parsing terminal output like other agents, AgentAPI starts `opencode serve` and communicates via REST API for better reliability and performance.
 
 An OpenAPI schema is available in [openapi.json](openapi.json).
 
