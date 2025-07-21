@@ -55,6 +55,36 @@ func TestOpenCodeIntegration(t *testing.T) {
 				"shared":    false,
 			})
 
+		case r.Method == "GET" && strings.HasPrefix(r.URL.Path, "/session/") && strings.HasSuffix(r.URL.Path, "/message"):
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(200)
+			json.NewEncoder(w).Encode([]map[string]interface{}{
+				{
+					"info": map[string]interface{}{
+						"id":   "msg_user_123",
+						"role": "user",
+					},
+					"parts": []map[string]interface{}{
+						{
+							"type": "text",
+							"text": "Hello, test message!",
+						},
+					},
+				},
+				{
+					"info": map[string]interface{}{
+						"id":   "msg_assistant_123", 
+						"role": "assistant",
+					},
+					"parts": []map[string]interface{}{
+						{
+							"type": "text",
+							"text": "Test response: Hello, test message!",
+						},
+					},
+				},
+			})
+
 		case r.Method == "POST" && strings.HasPrefix(r.URL.Path, "/session/") && strings.HasSuffix(r.URL.Path, "/message"):
 			// Validate the request format
 			var req SendMessageRequest
@@ -98,16 +128,17 @@ func TestOpenCodeIntegration(t *testing.T) {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(200)
 			json.NewEncoder(w).Encode(map[string]interface{}{
-				"message": map[string]interface{}{
+				"info": map[string]interface{}{
 					"id":   "msg_test_123",
 					"role": "assistant",
-					"parts": []map[string]interface{}{
-						{
-							"type": "text",
-							"text": "Test response: " + req.Parts[0].Text,
-						},
+				},
+				"parts": []map[string]interface{}{
+					{
+						"type": "text",
+						"text": "Test response: " + req.Parts[0].Text,
 					},
 				},
+				"cost": 0,
 			})
 
 		default:
@@ -136,7 +167,7 @@ func TestOpenCodeIntegration(t *testing.T) {
 	}
 
 	// Wait for async response
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(3 * time.Second)
 
 	// Check messages
 	messages := conv.Messages()

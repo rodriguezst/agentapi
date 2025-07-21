@@ -70,7 +70,16 @@ type SendMessageRequest struct {
 
 // SendMessageResponse represents the response from sending a message
 type SendMessageResponse struct {
-	Message Message `json:"message"`
+	Info  MessageInfo   `json:"info"`
+	Parts []MessagePart `json:"parts"`
+	Cost  int           `json:"cost"`
+}
+
+// MessageInfo represents message metadata in OpenCode response
+type MessageInfo struct {
+	ID     string   `json:"id"`
+	Role   string   `json:"role"`
+	System []string `json:"system,omitempty"`
 }
 
 // CreateSession creates a new OpenCode session
@@ -98,19 +107,17 @@ func (c *Client) SendMessage(ctx context.Context, sessionID string, req SendMess
 
 // GetMessages retrieves messages from an OpenCode session
 func (c *Client) GetMessages(ctx context.Context, sessionID string) ([]Message, error) {
-	var resp struct {
-		Messages []struct {
-			Info  Message `json:"info"`
-			Parts []MessagePart `json:"parts"`
-		} `json:"messages"`
+	var resp []struct {
+		Info  MessageInfo   `json:"info"`
+		Parts []MessagePart `json:"parts"`
 	}
 	
 	if err := c.get(ctx, fmt.Sprintf("/session/%s/message", sessionID), &resp); err != nil {
 		return nil, fmt.Errorf("failed to get messages: %w", err)
 	}
 	
-	messages := make([]Message, len(resp.Messages))
-	for i, msg := range resp.Messages {
+	messages := make([]Message, len(resp))
+	for i, msg := range resp {
 		messages[i] = Message{
 			ID:    msg.Info.ID,
 			Role:  msg.Info.Role,

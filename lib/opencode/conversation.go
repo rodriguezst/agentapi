@@ -171,6 +171,39 @@ func (c *Conversation) sendMessageAsync(content string) {
 		return
 	}
 
+	c.logger.Info("OpenCode response received", "parts_count", len(resp.Parts), "info_id", resp.Info.ID, "info_role", resp.Info.Role)
+
+	// Wait a bit for OpenCode to complete processing, then fetch the complete conversation
+	time.Sleep(2 * time.Second)
+	
+	var assistantMessage string
+	
+	// Try to get the updated messages from OpenCode to get the actual response content
+	messages, err := c.client.GetMessages(ctx, c.sessionID)
+	if err != nil {
+		c.logger.Error("Failed to get messages from OpenCode", "error", err)
+		// Fallback to original response parts
+		assistantMessage = c.formatMessageParts(resp.Parts)
+	} else {
+		c.logger.Info("Retrieved messages from OpenCode", "count", len(messages))
+		
+		// Find the latest assistant message
+		found := false
+		for i := len(messages) - 1; i >= 0; i-- {
+			if messages[i].Role == "assistant" {
+				c.logger.Info("Found assistant message", "parts_count", len(messages[i].Parts))
+				assistantMessage = c.formatMessageParts(messages[i].Parts)
+				found = true
+				break
+			}
+		}
+		
+		if !found {
+			// Fallback to original response parts
+			assistantMessage = c.formatMessageParts(resp.Parts)
+		}
+	}
+
 	// Update messages with assistant response
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -179,7 +212,7 @@ func (c *Conversation) sendMessageAsync(content string) {
 	assistantMsg := st.ConversationMessage{
 		Id:      len(c.messages),
 		Role:    st.ConversationRoleAgent,
-		Message: c.formatMessageParts(resp.Message.Parts),
+		Message: assistantMessage,
 		Time:    time.Now(),
 	}
 	c.messages = append(c.messages, assistantMsg)
@@ -189,11 +222,14 @@ func (c *Conversation) sendMessageAsync(content string) {
 // formatMessageParts converts OpenCode message parts to a single string
 func (c *Conversation) formatMessageParts(parts []MessagePart) string {
 	var result strings.Builder
-	for i, part := range parts {
-		if i > 0 {
-			result.WriteString("\n")
+	for _, part := range parts {
+		// Only include text parts, skip system parts like "step-start", "step-finish", etc.
+		if part.Type == "text" && part.Text != "" {
+			if result.Len() > 0 {
+				result.WriteString("\n")
+			}
+			result.WriteString(part.Text)
 		}
-		result.WriteString(part.Text)
 	}
 	return result.String()
 }
