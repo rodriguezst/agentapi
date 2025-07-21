@@ -43,11 +43,12 @@ func NewConversation(ctx context.Context, client *Client, logger *slog.Logger) (
 
 	// Get providers to set defaults
 	if err := conv.setupDefaults(ctx); err != nil {
-		logger.Warn("Failed to setup defaults", "error", err)
-		// Set fallback defaults
-		conv.defaultProvider = "anthropic"
-		conv.defaultModel = "claude-3-5-sonnet-20241022"
+		logger.Warn("Failed to setup defaults from providers", "error", err)
+		// Set fallback defaults that match our mockgpt config
+		conv.defaultProvider = "mockgpt"
+		conv.defaultModel = "gpt-3.5-turbo"
 		conv.defaultMode = "code"
+		logger.Info("Using fallback defaults", "provider", conv.defaultProvider, "model", conv.defaultModel)
 	}
 
 	logger.Info("Created OpenCode conversation", "sessionID", conv.sessionID)
@@ -61,23 +62,46 @@ func (c *Conversation) setupDefaults(ctx context.Context) error {
 		return err
 	}
 
-	// Try to find a good default provider and model
-	if providersMap, ok := providers["providers"].([]interface{}); ok && len(providersMap) > 0 {
-		if provider, ok := providersMap[0].(map[string]interface{}); ok {
-			if id, ok := provider["id"].(string); ok {
-				c.defaultProvider = id
+	// Look for providers in the response structure that matches OpenCode API
+	if providersData, ok := providers["providers"].([]interface{}); ok && len(providersData) > 0 {
+		// Use the first available provider
+		if provider, ok := providersData[0].(map[string]interface{}); ok {
+			if providerID, ok := provider["id"].(string); ok {
+				c.defaultProvider = providerID
+				c.logger.Info("Using provider", "providerID", providerID)
 			}
 			if models, ok := provider["models"].(map[string]interface{}); ok {
+				// Use the first available model
 				for modelID := range models {
 					c.defaultModel = modelID
-					break // Use first available model
+					c.logger.Info("Using model", "modelID", modelID)
+					break
 				}
 			}
 		}
 	}
 
+	// Try to get defaults from the "default" field if available
+	if defaultMap, ok := providers["default"].(map[string]interface{}); ok {
+		if c.defaultProvider != "" {
+			if defaultModel, ok := defaultMap[c.defaultProvider].(string); ok {
+				c.defaultModel = defaultModel
+				c.logger.Info("Using default model for provider", "providerID", c.defaultProvider, "modelID", defaultModel)
+			}
+		}
+	}
+
+	// If still no provider/model found, check the config
+	if c.defaultProvider == "" || c.defaultModel == "" {
+		c.logger.Warn("No providers found in API response, using fallback from config")
+		c.defaultProvider = "mockgpt"  // Match the config we set up
+		c.defaultModel = "gpt-3.5-turbo"
+	}
+
 	// Set default mode
 	c.defaultMode = "code"
+	
+	c.logger.Info("Setup complete", "provider", c.defaultProvider, "model", c.defaultModel, "mode", c.defaultMode)
 
 	return nil
 }
@@ -120,14 +144,13 @@ func (c *Conversation) sendMessageAsync(content string) {
 	defer cancel()
 
 	req := SendMessageRequest{
-		MessageID:  generateID(),
 		ProviderID: c.defaultProvider,
 		ModelID:    c.defaultModel,
 		Mode:       c.defaultMode,
 		Parts: []MessagePart{
 			{
-				Type:    "text",
-				Content: content,
+				Type: "text",
+				Text: content,
 			},
 		},
 	}
@@ -163,7 +186,7 @@ func (c *Conversation) formatMessageParts(parts []MessagePart) string {
 		if i > 0 {
 			result.WriteString("\n")
 		}
-		result.WriteString(part.Content)
+		result.WriteString(part.Text)
 	}
 	return result.String()
 }

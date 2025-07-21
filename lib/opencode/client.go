@@ -44,8 +44,8 @@ type Message struct {
 
 // MessagePart represents a part of an OpenCode message
 type MessagePart struct {
-	Type    string `json:"type"`
-	Content string `json:"content"`
+	Type string `json:"type"`
+	Text string `json:"text"`
 }
 
 // CreateSessionRequest represents the request to create a session
@@ -62,10 +62,10 @@ type CreateSessionResponse struct {
 
 // SendMessageRequest represents the request to send a message
 type SendMessageRequest struct {
-	MessageID  string        `json:"messageID"`
+	MessageID  string        `json:"messageID,omitempty"`
 	ProviderID string        `json:"providerID"`
 	ModelID    string        `json:"modelID"`
-	Mode       string        `json:"mode"`
+	Mode       string        `json:"mode,omitempty"`
 	Parts      []MessagePart `json:"parts"`
 }
 
@@ -168,8 +168,10 @@ func (c *Client) request(ctx context.Context, method, path string, reqBody inter
 	url := c.baseURL + path
 	
 	var body io.Reader
+	var jsonData []byte
 	if reqBody != nil {
-		jsonData, err := json.Marshal(reqBody)
+		var err error
+		jsonData, err = json.Marshal(reqBody)
 		if err != nil {
 			return fmt.Errorf("failed to marshal request body: %w", err)
 		}
@@ -192,7 +194,10 @@ func (c *Client) request(ctx context.Context, method, path string, reqBody inter
 	defer resp.Body.Close()
 	
 	if resp.StatusCode >= 400 {
-		return fmt.Errorf("request failed with status %d", resp.StatusCode)
+		// Read the response body for better error messages
+		respBodyBytes, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("request failed with status %d, url: %s, request body: %s, response: %s", 
+			resp.StatusCode, url, string(jsonData), string(respBodyBytes))
 	}
 	
 	if respBody != nil {

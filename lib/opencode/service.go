@@ -31,6 +31,13 @@ func NewService(logger *slog.Logger, port int) *Service {
 
 // Start starts the OpenCode server
 func (s *Service) Start(ctx context.Context) error {
+	// Check if we should skip starting the actual process (for testing)
+	if os.Getenv("OPENCODE_MOCK_URL") != "" {
+		s.logger.Info("Using mock OpenCode server", "url", os.Getenv("OPENCODE_MOCK_URL"))
+		s.client = NewClient(os.Getenv("OPENCODE_MOCK_URL"))
+		return s.client.WaitForReady(ctx, 30*time.Second)
+	}
+	
 	// Start the opencode serve process
 	s.cmd = exec.CommandContext(ctx, "opencode", "serve", "--port", strconv.Itoa(s.port), "--hostname", "127.0.0.1")
 	s.cmd.Env = append(os.Environ())
@@ -57,6 +64,12 @@ func (s *Service) Start(ctx context.Context) error {
 
 // Stop stops the OpenCode server
 func (s *Service) Stop() error {
+	// If using mock URL, no process to stop
+	if os.Getenv("OPENCODE_MOCK_URL") != "" {
+		s.logger.Info("Mock OpenCode server, no process to stop")
+		return nil
+	}
+	
 	if s.cmd != nil && s.cmd.Process != nil {
 		s.logger.Info("Stopping OpenCode server")
 		
@@ -93,6 +106,11 @@ func (s *Service) Client() *Client {
 
 // IsRunning checks if the OpenCode server is running
 func (s *Service) IsRunning() bool {
+	// If using mock URL, always return true
+	if os.Getenv("OPENCODE_MOCK_URL") != "" {
+		return true
+	}
+	
 	if s.cmd == nil || s.cmd.Process == nil {
 		return false
 	}
