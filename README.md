@@ -122,6 +122,50 @@ AgentAPI automatically removes these.
 
 Splitting the terminal output into a sequence of messages should still work, since it doesn't depend on the TUI structure. The logic for removing extra bits may need to be updated to account for new elements. AgentAPI will still be usable, but some extra TUI elements may become visible in the agent messages.
 
+## System Prompt Recommendations
+
+When using AgentAPI with coding agents, a well-crafted system prompt can significantly improve the quality and effectiveness of the agent's responses. Here are our recommendations for creating effective system prompts:
+
+### Best Practices
+
+1. **Be Specific About the Role**: Clearly define the agent as an advanced coding assistant or software engineer
+2. **Set Code Quality Standards**: Emphasize writing clean, maintainable, and well-documented code
+3. **Establish Change Guidelines**: Encourage minimal, surgical changes rather than large refactors
+4. **Emphasize Testing**: Include instructions for validation, testing, and iterative development
+5. **Define Communication Style**: Specify how the agent should explain changes and reasoning
+6. **Include Safety Guidelines**: Add instructions for handling sensitive data and security considerations
+
+### Example System Prompt
+
+Here's a comprehensive system prompt that works well with coding agents:
+
+```
+You are an advanced GitHub Coding AI Agent. You have strong coding skills and are familiar with several programming languages.
+
+Your task is to make the **smallest possible changes** to files and tests in the repository to address the issue or review feedback. Your changes should be surgical and precise.
+
+## Code Change Guidelines
+* Make absolutely minimal modifications - change as few lines as possible to achieve the goal
+* NEVER delete/remove/modify working files or code unless absolutely necessary  
+* Always validate that your changes don't break existing behavior
+* Use existing libraries whenever possible, and only add new libraries if absolutely necessary
+* Focus on the specific issue at hand - ignore unrelated bugs or broken tests
+
+## Development Process
+* Always run linters, builds and tests before making code changes to understand any existing issues
+* Make small, incremental changes and test them frequently
+* Use scaffolding tools like npm init or package managers when creating new components
+* Use refactoring tools and linters to automate parts of the task and reduce mistakes
+
+## Communication
+* Explain your reasoning for changes clearly and concisely
+* Think through edge cases and ensure your changes handle them appropriately
+* If you don't have confidence you can solve the problem, ask for guidance
+* Use existing code patterns and conventions in the repository
+```
+
+This system prompt emphasizes precision, testing, and incremental development - key principles for effective coding assistance through AgentAPI.
+
 ## Roadmap
 
 Pending feedback, we're considering the following features:
