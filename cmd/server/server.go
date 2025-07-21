@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 	"golang.org/x/xerrors"
@@ -15,26 +16,29 @@ import (
 	"github.com/coder/agentapi/lib/httpapi"
 	"github.com/coder/agentapi/lib/logctx"
 	"github.com/coder/agentapi/lib/msgfmt"
+	"github.com/coder/agentapi/lib/opencode"
 	"github.com/coder/agentapi/lib/termexec"
 )
 
 var (
-	agentTypeVar string
-	port         int
-	printOpenAPI bool
-	chatBasePath string
-	termWidth    uint16
-	termHeight   uint16
+	agentTypeVar     string
+	port             int
+	printOpenAPI     bool
+	chatBasePath     string
+	termWidth        uint16
+	termHeight       uint16
+	openCodeConfig   string
 )
 
 type AgentType = msgfmt.AgentType
 
 const (
-	AgentTypeClaude AgentType = msgfmt.AgentTypeClaude
-	AgentTypeGoose  AgentType = msgfmt.AgentTypeGoose
-	AgentTypeAider  AgentType = msgfmt.AgentTypeAider
-	AgentTypeCodex  AgentType = msgfmt.AgentTypeCodex
-	AgentTypeCustom AgentType = msgfmt.AgentTypeCustom
+	AgentTypeClaude   AgentType = msgfmt.AgentTypeClaude
+	AgentTypeGoose    AgentType = msgfmt.AgentTypeGoose
+	AgentTypeAider    AgentType = msgfmt.AgentTypeAider
+	AgentTypeCodex    AgentType = msgfmt.AgentTypeCodex
+	AgentTypeOpenCode AgentType = msgfmt.AgentTypeOpenCode
+	AgentTypeCustom   AgentType = msgfmt.AgentTypeCustom
 )
 
 func parseAgentType(firstArg string, agentTypeVar string) (AgentType, error) {
@@ -50,6 +54,8 @@ func parseAgentType(firstArg string, agentTypeVar string) (AgentType, error) {
 		agentType = AgentTypeCustom
 	case string(AgentTypeCodex):
 		agentType = AgentTypeCodex
+	case string(AgentTypeOpenCode):
+		agentType = AgentTypeOpenCode
 	case "":
 		// do nothing
 	default:
@@ -68,6 +74,8 @@ func parseAgentType(firstArg string, agentTypeVar string) (AgentType, error) {
 		agentType = AgentTypeAider
 	case string(AgentTypeCodex):
 		agentType = AgentTypeCodex
+	case string(AgentTypeOpenCode):
+		agentType = AgentTypeOpenCode
 	default:
 		agentType = AgentTypeCustom
 	}
@@ -86,6 +94,11 @@ func runServer(ctx context.Context, logger *slog.Logger, argsToPass []string) er
 	}
 	if termHeight < 10 {
 		return xerrors.Errorf("term height must be at least 10")
+	}
+
+	// Handle OpenCode differently - use REST API instead of TUI
+	if agentType == AgentTypeOpenCode {
+		return runOpenCodeServer(ctx, logger, argsToPass)
 	}
 
 	var process *termexec.Process
@@ -134,10 +147,75 @@ func runServer(ctx context.Context, logger *slog.Logger, argsToPass []string) er
 	return nil
 }
 
+func runOpenCodeServer(ctx context.Context, logger *slog.Logger, argsToPass []string) error {
+	// Find an available port for OpenCode server
+	openCodePort := port + 1000 // Use a different port to avoid conflicts
+	
+	// Set OpenCode config if specified
+	if openCodeConfig != "" {
+		os.Setenv("OPENCODE_CONFIG", openCodeConfig)
+		logger.Info("Using OpenCode config file", "path", openCodeConfig)
+	}
+	
+	// Create and start OpenCode service
+	service := opencode.NewService(logger, openCodePort)
+	
+	if printOpenAPI {
+		// For OpenAPI spec, we don't need to start the actual service
+		srv := httpapi.NewServer(ctx, AgentTypeOpenCode, nil, port, chatBasePath)
+		fmt.Println(srv.GetOpenAPI())
+		return nil
+	}
+	
+	if err := service.Start(ctx); err != nil {
+		return xerrors.Errorf("failed to start OpenCode service: %w", err)
+	}
+	defer service.Stop()
+	
+	// Create OpenCode conversation
+	conv, err := opencode.NewConversation(ctx, service.Client(), logger)
+	if err != nil {
+		return xerrors.Errorf("failed to create OpenCode conversation: %w", err)
+	}
+	
+	// Create server with OpenCode conversation adapter
+	srv := httpapi.NewOpenCodeServer(ctx, conv, port, chatBasePath, logger)
+	
+	logger.Info("Starting AgentAPI server with OpenCode backend", "port", port, "opencode_port", openCodePort)
+	
+	// Handle graceful shutdown
+	serviceExitCh := make(chan error, 1)
+	go func() {
+		defer close(serviceExitCh)
+		for service.IsRunning() {
+			time.Sleep(1 * time.Second)
+		}
+		serviceExitCh <- nil
+	}()
+	
+	// Start the server
+	if err := srv.Start(); err != nil && err != context.Canceled && err != http.ErrServerClosed {
+		return xerrors.Errorf("failed to start server: %w", err)
+	}
+	
+	select {
+	case err := <-serviceExitCh:
+		if err != nil {
+			return xerrors.Errorf("OpenCode service exited with error: %w", err)
+		}
+		return nil
+	default:
+	}
+	return nil
+}
+
 var ServerCmd = &cobra.Command{
 	Use:   "server [agent]",
 	Short: "Run the server",
-	Long:  `Run the server with the specified agent (claude, goose, aider, codex)`,
+	Long:  `Run the server with the specified agent (claude, goose, aider, codex, opencode)
+	
+For opencode, you can optionally specify a config file path:
+  agentapi server --opencode-config ~/.config/opencode/opencode.json -- opencode`,
 	Args:  cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
@@ -150,10 +228,11 @@ var ServerCmd = &cobra.Command{
 }
 
 func init() {
-	ServerCmd.Flags().StringVarP(&agentTypeVar, "type", "t", "", "Override the agent type (one of: claude, goose, aider, custom)")
+	ServerCmd.Flags().StringVarP(&agentTypeVar, "type", "t", "", "Override the agent type (one of: claude, goose, aider, codex, opencode, custom)")
 	ServerCmd.Flags().IntVarP(&port, "port", "p", 3284, "Port to run the server on")
 	ServerCmd.Flags().BoolVarP(&printOpenAPI, "print-openapi", "P", false, "Print the OpenAPI schema to stdout and exit")
 	ServerCmd.Flags().StringVarP(&chatBasePath, "chat-base-path", "c", "/chat", "Base path for assets and routes used in the static files of the chat interface")
 	ServerCmd.Flags().Uint16VarP(&termWidth, "term-width", "W", 80, "Width of the emulated terminal")
 	ServerCmd.Flags().Uint16VarP(&termHeight, "term-height", "H", 1000, "Height of the emulated terminal")
+	ServerCmd.Flags().StringVarP(&openCodeConfig, "opencode-config", "", "", "Path to OpenCode configuration file (only used with opencode agent)")
 }
