@@ -40,6 +40,13 @@ func NewConversation(ctx context.Context, client *Client, logger *slog.Logger) (
 	}
 	conv.sessionID = session.ID
 
+	// Log OpenCode configuration for debugging
+	if config, err := client.GetConfig(ctx); err == nil {
+		logger.Info("OpenCode configuration", "config", config)
+	} else {
+		logger.Warn("Failed to get OpenCode configuration", "error", err)
+	}
+
 	// Get providers to set defaults
 	if err := conv.setupDefaults(ctx); err != nil {
 		logger.Warn("Failed to setup defaults from providers", "error", err)
@@ -60,8 +67,13 @@ func (c *Conversation) setupDefaults(ctx context.Context) error {
 		return err
 	}
 
+	// Log the full providers response for debugging
+	c.logger.Info("OpenCode providers response", "providers", providers)
+
 	// Look for providers in the response structure that matches OpenCode API
 	if providersData, ok := providers["providers"].([]interface{}); ok && len(providersData) > 0 {
+		c.logger.Info("Found providers", "count", len(providersData))
+		
 		// Use the first available provider
 		if provider, ok := providersData[0].(map[string]interface{}); ok {
 			if providerID, ok := provider["id"].(string); ok {
@@ -81,6 +93,7 @@ func (c *Conversation) setupDefaults(ctx context.Context) error {
 
 	// Try to get defaults from the "default" field if available
 	if defaultMap, ok := providers["default"].(map[string]interface{}); ok {
+		c.logger.Info("Found default provider mappings", "defaults", defaultMap)
 		if c.defaultProvider != "" {
 			if defaultModel, ok := defaultMap[c.defaultProvider].(string); ok {
 				c.defaultModel = defaultModel

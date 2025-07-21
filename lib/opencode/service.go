@@ -38,15 +38,24 @@ func (s *Service) Start(ctx context.Context) error {
 		return s.client.WaitForReady(ctx, 30*time.Second)
 	}
 	
+	// Prepare OpenCode command
+	args := []string{"serve", "--port", strconv.Itoa(s.port), "--hostname", "127.0.0.1"}
+	
+	// Check if a specific config file is specified
+	if configPath := os.Getenv("OPENCODE_CONFIG"); configPath != "" {
+		args = append(args, "--config", configPath)
+		s.logger.Info("Using OpenCode config file", "path", configPath)
+	}
+	
 	// Start the opencode serve process
-	s.cmd = exec.CommandContext(ctx, "opencode", "serve", "--port", strconv.Itoa(s.port), "--hostname", "127.0.0.1")
+	s.cmd = exec.CommandContext(ctx, "opencode", args...)
 	s.cmd.Env = append(os.Environ())
 	
 	// Redirect stdout and stderr to help with debugging
 	s.cmd.Stdout = os.Stdout
 	s.cmd.Stderr = os.Stderr
 	
-	s.logger.Info("Starting OpenCode server", "port", s.port)
+	s.logger.Info("Starting OpenCode server", "port", s.port, "args", args)
 	
 	if err := s.cmd.Start(); err != nil {
 		return fmt.Errorf("failed to start opencode serve: %w", err)

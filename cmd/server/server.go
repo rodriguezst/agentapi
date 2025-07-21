@@ -21,12 +21,13 @@ import (
 )
 
 var (
-	agentTypeVar string
-	port         int
-	printOpenAPI bool
-	chatBasePath string
-	termWidth    uint16
-	termHeight   uint16
+	agentTypeVar     string
+	port             int
+	printOpenAPI     bool
+	chatBasePath     string
+	termWidth        uint16
+	termHeight       uint16
+	openCodeConfig   string
 )
 
 type AgentType = msgfmt.AgentType
@@ -150,6 +151,12 @@ func runOpenCodeServer(ctx context.Context, logger *slog.Logger, argsToPass []st
 	// Find an available port for OpenCode server
 	openCodePort := port + 1000 // Use a different port to avoid conflicts
 	
+	// Set OpenCode config if specified
+	if openCodeConfig != "" {
+		os.Setenv("OPENCODE_CONFIG", openCodeConfig)
+		logger.Info("Using OpenCode config file", "path", openCodeConfig)
+	}
+	
 	// Create and start OpenCode service
 	service := opencode.NewService(logger, openCodePort)
 	
@@ -205,7 +212,10 @@ func runOpenCodeServer(ctx context.Context, logger *slog.Logger, argsToPass []st
 var ServerCmd = &cobra.Command{
 	Use:   "server [agent]",
 	Short: "Run the server",
-	Long:  `Run the server with the specified agent (claude, goose, aider, codex, opencode)`,
+	Long:  `Run the server with the specified agent (claude, goose, aider, codex, opencode)
+	
+For opencode, you can optionally specify a config file path:
+  agentapi server --opencode-config ~/.config/opencode/opencode.json -- opencode`,
 	Args:  cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
@@ -224,4 +234,5 @@ func init() {
 	ServerCmd.Flags().StringVarP(&chatBasePath, "chat-base-path", "c", "/chat", "Base path for assets and routes used in the static files of the chat interface")
 	ServerCmd.Flags().Uint16VarP(&termWidth, "term-width", "W", 80, "Width of the emulated terminal")
 	ServerCmd.Flags().Uint16VarP(&termHeight, "term-height", "H", 1000, "Height of the emulated terminal")
+	ServerCmd.Flags().StringVarP(&openCodeConfig, "opencode-config", "", "", "Path to OpenCode configuration file (only used with opencode agent)")
 }

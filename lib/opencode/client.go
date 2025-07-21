@@ -132,6 +132,17 @@ func (c *Client) GetProviders(ctx context.Context) (map[string]interface{}, erro
 	return resp, nil
 }
 
+// GetConfig retrieves the OpenCode configuration
+func (c *Client) GetConfig(ctx context.Context) (map[string]interface{}, error) {
+	var resp map[string]interface{}
+	
+	if err := c.get(ctx, "/config", &resp); err != nil {
+		return nil, fmt.Errorf("failed to get config: %w", err)
+	}
+	
+	return resp, nil
+}
+
 // WaitForReady waits for the OpenCode server to be ready
 func (c *Client) WaitForReady(ctx context.Context, maxWait time.Duration) error {
 	deadline := time.Now().Add(maxWait)
