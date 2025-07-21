@@ -65,7 +65,6 @@ type SendMessageRequest struct {
 	MessageID  string        `json:"messageID,omitempty"`
 	ProviderID string        `json:"providerID"`
 	ModelID    string        `json:"modelID"`
-	Mode       string        `json:"mode,omitempty"`
 	Parts      []MessagePart `json:"parts"`
 }
 

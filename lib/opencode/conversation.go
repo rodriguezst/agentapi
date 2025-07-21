@@ -22,7 +22,6 @@ type Conversation struct {
 	logger           *slog.Logger
 	defaultProvider  string
 	defaultModel     string
-	defaultMode      string
 }
 
 // NewConversation creates a new OpenCode conversation
@@ -47,7 +46,6 @@ func NewConversation(ctx context.Context, client *Client, logger *slog.Logger) (
 		// Set fallback defaults that match our mockgpt config
 		conv.defaultProvider = "mockgpt"
 		conv.defaultModel = "gpt-3.5-turbo"
-		conv.defaultMode = "code"
 		logger.Info("Using fallback defaults", "provider", conv.defaultProvider, "model", conv.defaultModel)
 	}
 
@@ -98,10 +96,7 @@ func (c *Conversation) setupDefaults(ctx context.Context) error {
 		c.defaultModel = "gpt-3.5-turbo"
 	}
 
-	// Set default mode
-	c.defaultMode = "code"
-	
-	c.logger.Info("Setup complete", "provider", c.defaultProvider, "model", c.defaultModel, "mode", c.defaultMode)
+	c.logger.Info("Setup complete", "provider", c.defaultProvider, "model", c.defaultModel)
 
 	return nil
 }
@@ -146,7 +141,6 @@ func (c *Conversation) sendMessageAsync(content string) {
 	req := SendMessageRequest{
 		ProviderID: c.defaultProvider,
 		ModelID:    c.defaultModel,
-		Mode:       c.defaultMode,
 		Parts: []MessagePart{
 			{
 				Type: "text",

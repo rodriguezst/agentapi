@@ -164,7 +164,6 @@ func TestSendMessageRequestFormat(t *testing.T) {
 	req := SendMessageRequest{
 		ProviderID: "test_provider",
 		ModelID:    "test_model",
-		Mode:       "code",
 		Parts: []MessagePart{
 			{
 				Type: "text",
@@ -190,9 +189,6 @@ func TestSendMessageRequestFormat(t *testing.T) {
 	}
 	if parsed["modelID"] != "test_model" {
 		t.Errorf("Expected modelID 'test_model', got '%v'", parsed["modelID"])
-	}
-	if parsed["mode"] != "code" {
-		t.Errorf("Expected mode 'code', got '%v'", parsed["mode"])
 	}
 
 	parts, ok := parsed["parts"].([]interface{})
