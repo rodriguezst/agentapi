@@ -139,13 +139,13 @@ export default function MessageInput({
 
   return (
     <Tabs value={inputMode} onValueChange={setInputMode}>
-      <div className="max-w-4xl mx-auto w-full p-4 pt-0">
+      <div className="max-w-4xl mx-auto w-full p-6 pt-4 bg-gradient-to-t from-white via-white to-transparent dark:from-background dark:via-background dark:to-transparent">
         <form
           onSubmit={handleSubmit}
-          className="rounded-lg border text-base shadow-sm placeholder:text-muted-foreground focus-within:outline-none focus-within:ring-1 focus-within:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+          className="relative group rounded-2xl border border-border/50 bg-white dark:bg-gray-800/50 shadow-lg shadow-black/5 dark:shadow-black/20 backdrop-blur-sm text-base placeholder:text-muted-foreground focus-within:outline-none focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-500/50 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm transition-all duration-200 hover:shadow-xl hover:shadow-black/10 dark:hover:shadow-black/30"
         >
           <div className="flex flex-col">
-            <div className="flex">
+            <div className="flex relative">
               {inputMode === "control" && !disabled ? (
                 <div
                   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -155,11 +155,18 @@ export default function MessageInput({
                   onKeyDown={handleKeyDown as any}
                   onFocus={() => setControlAreaFocused(true)}
                   onBlur={() => setControlAreaFocused(false)}
-                  className="cursor-text p-4 h-20 text-muted-foreground flex items-center justify-center w-full outline-none text-sm"
+                  className="cursor-text p-6 h-20 text-muted-foreground flex items-center justify-center w-full outline-none text-sm bg-gradient-to-br from-amber-50/50 to-orange-50/50 dark:from-amber-900/10 dark:to-orange-900/10 rounded-t-2xl border-b border-border/30"
                 >
-                  {controlAreaFocused
-                    ? "Press any key to send to terminal (arrows, Ctrl+C, Ctrl+R, etc.)"
-                    : "Click or focus this area to send keystrokes to terminal"}
+                  <div className="text-center">
+                    <div className="text-amber-600 dark:text-amber-400 font-medium mb-1">
+                      {controlAreaFocused ? "🎛️ Control Mode Active" : "🎛️ Terminal Control"}
+                    </div>
+                    <div className="text-xs">
+                      {controlAreaFocused
+                        ? "Press any key to send to terminal (arrows, Ctrl+C, Ctrl+R, etc.)"
+                        : "Click or focus this area to send keystrokes to terminal"}
+                    </div>
+                  </div>
                 </div>
               ) : (
                 <textarea
@@ -168,50 +175,64 @@ export default function MessageInput({
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder={"Type a message..."}
-                  className="resize-none w-full text-sm outline-none p-4 h-20"
+                  placeholder="Type a message..."
+                  className="resize-none w-full text-sm outline-none p-6 h-20 bg-transparent rounded-t-2xl placeholder:text-muted-foreground/70"
                 />
               )}
+              
+              {/* Floating gradient indicator */}
+              <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 opacity-0 group-focus-within:opacity-100 transition-opacity duration-200" />
             </div>
 
-            <div className="flex items-center justify-between p-4">
-              <TabsList className="bg-transparent">
-                <TabsTrigger
-                  value="text"
-                  onClick={() => {
-                    textareaRef.current?.focus();
-                  }}
-                >
-                  Text
-                </TabsTrigger>
-                <TabsTrigger
-                  value="control"
-                  onClick={() => {
-                    textareaRef.current?.focus();
-                  }}
-                >
-                  Control
-                </TabsTrigger>
-              </TabsList>
+            <div className="flex items-center justify-between p-4 pt-2 bg-gray-50/50 dark:bg-gray-900/20 rounded-b-2xl border-t border-border/30">
+              <div className="flex items-center gap-2">
+                <TabsList className="bg-white dark:bg-gray-800 shadow-sm border border-border/50">
+                  <TabsTrigger
+                    value="text"
+                    onClick={() => {
+                      textareaRef.current?.focus();
+                    }}
+                    className="data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200"
+                  >
+                    💬 Text
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="control"
+                    onClick={() => {
+                      textareaRef.current?.focus();
+                    }}
+                    className="data-[state=active]:bg-amber-500 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200"
+                  >
+                    🎛️ Control
+                  </TabsTrigger>
+                </TabsList>
+                
+                {/* Character count for text mode */}
+                {inputMode === "text" && message.length > 0 && (
+                  <div className="text-xs text-muted-foreground">
+                    {message.length} chars
+                  </div>
+                )}
+              </div>
 
               {inputMode === "text" && (
                 <Button
                   type="submit"
                   disabled={disabled || !message.trim()}
                   size="icon"
-                  className="rounded-full"
+                  className="rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 shadow-lg shadow-blue-500/25 disabled:shadow-none transition-all duration-200 hover:scale-105 active:scale-95"
                 >
-                  <SendIcon />
+                  <SendIcon className="h-4 w-4" />
                   <span className="sr-only">Send</span>
                 </Button>
               )}
 
               {inputMode === "control" && !disabled && (
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-2">
                   {sentChars.map((char) => (
                     <span
                       key={char.id}
-                      className="min-w-9 h-9 px-2 rounded border font-mono font-medium text-xs flex items-center justify-center animate-pulse"
+                      className="min-w-9 h-9 px-2 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 font-mono font-medium text-xs flex items-center justify-center animate-pulse shadow-sm"
                     >
                       <Char char={char.char} />
                     </span>
@@ -222,17 +243,17 @@ export default function MessageInput({
           </div>
         </form>
 
-        <span className="text-xs text-muted-foreground mt-2 block text-center">
-          {inputMode === "text" ? (
-            <>
-              Switch to <span className="font-medium">Control</span> mode to
-              send raw keystrokes (↑,↓,Tab,Ctrl+C,Ctrl+R) directly to the
-              terminal
-            </>
-          ) : (
-            <>Control mode - keystrokes sent directly to terminal</>
-          )}
-        </span>
+        <div className="text-center mt-3">
+          <span className="text-xs text-muted-foreground/80 bg-white dark:bg-gray-800 px-3 py-1 rounded-full border border-border/30">
+            {inputMode === "text" ? (
+              <>
+                💬 Chat with your agent • Switch to <span className="font-medium text-amber-600 dark:text-amber-400">Control</span> mode for terminal commands
+              </>
+            ) : (
+              <>🎛️ Terminal control mode • All keystrokes sent directly to agent</>
+            )}
+          </span>
+        </div>
       </div>
     </Tabs>
   );
