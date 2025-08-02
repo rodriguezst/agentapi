@@ -193,11 +193,12 @@ func trimEmptyLines(message string) string {
 type AgentType string
 
 const (
-	AgentTypeClaude AgentType = "claude"
-	AgentTypeGoose  AgentType = "goose"
-	AgentTypeAider  AgentType = "aider"
-	AgentTypeCodex  AgentType = "codex"
-	AgentTypeCustom AgentType = "custom"
+	AgentTypeClaude   AgentType = "claude"
+	AgentTypeGoose    AgentType = "goose"
+	AgentTypeAider    AgentType = "aider"
+	AgentTypeCodex    AgentType = "codex"
+	AgentTypeOpencode AgentType = "opencode"
+	AgentTypeCustom   AgentType = "custom"
 )
 
 func formatGenericMessage(message string, userInput string) string {
@@ -217,6 +218,9 @@ func FormatAgentMessage(agentType AgentType, message string, userInput string) s
 		return formatGenericMessage(message, userInput)
 	case AgentTypeCodex:
 		return formatGenericMessage(message, userInput)
+	case AgentTypeOpencode:
+		// Opencode uses REST API, so messages don't need TUI formatting
+		return trimEmptyLines(message)
 	case AgentTypeCustom:
 		return formatGenericMessage(message, userInput)
 	default:

@@ -58,6 +58,16 @@ func TestParseAgentType(t *testing.T) {
 			agentTypeVar: "custom",
 			want:         AgentTypeCustom,
 		},
+		{
+			firstArg:     "opencode",
+			agentTypeVar: "",
+			want:         AgentTypeOpencode,
+		},
+		{
+			firstArg:     "whatever",
+			agentTypeVar: "opencode",
+			want:         AgentTypeOpencode,
+		},
 	}
 
 	for _, test := range tests {

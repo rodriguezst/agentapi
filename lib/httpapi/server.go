@@ -23,16 +23,17 @@ import (
 
 // Server represents the HTTP server
 type Server struct {
-	router       chi.Router
-	api          huma.API
-	port         int
-	srv          *http.Server
-	mu           sync.RWMutex
-	logger       *slog.Logger
-	conversation *st.Conversation
-	agentio      *termexec.Process
-	agentType    mf.AgentType
-	emitter      *EventEmitter
+	router         chi.Router
+	api            huma.API
+	port           int
+	srv            *http.Server
+	mu             sync.RWMutex
+	logger         *slog.Logger
+	conversation   *st.Conversation
+	agentio        *termexec.Process
+	opencodeClient *OpencodeClient
+	agentType      mf.AgentType
+	emitter        *EventEmitter
 }
 
 func (s *Server) GetOpenAPI() string {
@@ -71,30 +72,45 @@ func NewServer(ctx context.Context, agentType mf.AgentType, process *termexec.Pr
 	router.Use(corsMiddleware.Handler)
 
 	humaConfig := huma.DefaultConfig("AgentAPI", "0.2.3")
-	humaConfig.Info.Description = "HTTP API for Claude Code, Goose, and Aider.\n\nhttps://github.com/coder/agentapi"
+	humaConfig.Info.Description = "HTTP API for Claude Code, Goose, Aider, and Opencode.\n\nhttps://github.com/coder/agentapi"
 	api := humachi.New(router, humaConfig)
-	formatMessage := func(message string, userInput string) string {
-		return mf.FormatAgentMessage(agentType, message, userInput)
-	}
-	conversation := st.NewConversation(ctx, st.ConversationConfig{
-		AgentIO: process,
-		GetTime: func() time.Time {
-			return time.Now()
-		},
-		SnapshotInterval:      snapshotInterval,
-		ScreenStabilityLength: 2 * time.Second,
-		FormatMessage:         formatMessage,
-	})
+
+	logger := logctx.From(ctx)
 	emitter := NewEventEmitter(1024)
+
 	s := &Server{
-		router:       router,
-		api:          api,
-		port:         port,
-		conversation: conversation,
-		logger:       logctx.From(ctx),
-		agentio:      process,
-		agentType:    agentType,
-		emitter:      emitter,
+		router:    router,
+		api:       api,
+		port:      port,
+		logger:    logger,
+		agentio:   process,
+		agentType: agentType,
+		emitter:   emitter,
+	}
+
+	if agentType == mf.AgentTypeOpencode {
+		// For opencode, create opencode client instead of conversation
+		opencodeClient, err := NewOpencodeClient(ctx, logger)
+		if err != nil {
+			logger.Error("Failed to create opencode client", "error", err)
+			// Continue with nil client, will handle in message endpoints
+		}
+		s.opencodeClient = opencodeClient
+	} else {
+		// For terminal-based agents, create conversation tracker
+		formatMessage := func(message string, userInput string) string {
+			return mf.FormatAgentMessage(agentType, message, userInput)
+		}
+		conversation := st.NewConversation(ctx, st.ConversationConfig{
+			AgentIO: process,
+			GetTime: func() time.Time {
+				return time.Now()
+			},
+			SnapshotInterval:      snapshotInterval,
+			ScreenStabilityLength: 2 * time.Second,
+			FormatMessage:         formatMessage,
+		})
+		s.conversation = conversation
 	}
 
 	// Register API routes
@@ -104,15 +120,34 @@ func NewServer(ctx context.Context, agentType mf.AgentType, process *termexec.Pr
 }
 
 func (s *Server) StartSnapshotLoop(ctx context.Context) {
-	s.conversation.StartSnapshotLoop(ctx)
-	go func() {
-		for {
-			s.emitter.UpdateStatusAndEmitChanges(s.conversation.Status())
-			s.emitter.UpdateMessagesAndEmitChanges(s.conversation.Messages())
-			s.emitter.UpdateScreenAndEmitChanges(s.conversation.Screen())
-			time.Sleep(snapshotInterval)
+	if s.agentType == mf.AgentTypeOpencode {
+		// For opencode, start a loop to emit changes from opencode client
+		go func() {
+			for {
+				if s.opencodeClient != nil {
+					s.emitter.UpdateStatusAndEmitChanges(s.opencodeClient.Status())
+					s.emitter.UpdateMessagesAndEmitChanges(s.opencodeClient.Messages())
+					s.emitter.UpdateScreenAndEmitChanges(s.opencodeClient.Screen())
+				}
+				time.Sleep(snapshotInterval)
+			}
+		}()
+	} else {
+		// For terminal-based agents, use conversation tracker
+		if s.conversation != nil {
+			s.conversation.StartSnapshotLoop(ctx)
 		}
-	}()
+		go func() {
+			for {
+				if s.conversation != nil {
+					s.emitter.UpdateStatusAndEmitChanges(s.conversation.Status())
+					s.emitter.UpdateMessagesAndEmitChanges(s.conversation.Messages())
+					s.emitter.UpdateScreenAndEmitChanges(s.conversation.Screen())
+				}
+				time.Sleep(snapshotInterval)
+			}
+		}()
+	}
 }
 
 // registerRoutes sets up all API endpoints
@@ -166,7 +201,15 @@ func (s *Server) getStatus(ctx context.Context, input *struct{}) (*StatusRespons
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	status := s.conversation.Status()
+	var status st.ConversationStatus
+	if s.agentType == mf.AgentTypeOpencode && s.opencodeClient != nil {
+		status = s.opencodeClient.Status()
+	} else if s.conversation != nil {
+		status = s.conversation.Status()
+	} else {
+		status = st.ConversationStatusStable // Default status
+	}
+	
 	agentStatus := convertStatus(status)
 
 	resp := &StatusResponse{}
@@ -180,9 +223,16 @@ func (s *Server) getMessages(ctx context.Context, input *struct{}) (*MessagesRes
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
+	var messages []st.ConversationMessage
+	if s.agentType == mf.AgentTypeOpencode && s.opencodeClient != nil {
+		messages = s.opencodeClient.Messages()
+	} else if s.conversation != nil {
+		messages = s.conversation.Messages()
+	}
+
 	resp := &MessagesResponse{}
-	resp.Body.Messages = make([]Message, len(s.conversation.Messages()))
-	for i, msg := range s.conversation.Messages() {
+	resp.Body.Messages = make([]Message, len(messages))
+	for i, msg := range messages {
 		resp.Body.Messages[i] = Message{
 			Id:      msg.Id,
 			Role:    msg.Role,
@@ -201,10 +251,26 @@ func (s *Server) createMessage(ctx context.Context, input *MessageRequest) (*Mes
 
 	switch input.Body.Type {
 	case MessageTypeUser:
-		if err := s.conversation.SendMessage(FormatMessage(s.agentType, input.Body.Content)...); err != nil {
-			return nil, xerrors.Errorf("failed to send message: %w", err)
+		if s.agentType == mf.AgentTypeOpencode && s.opencodeClient != nil {
+			// Use opencode REST API
+			if err := s.opencodeClient.SendMessage(ctx, input.Body.Content); err != nil {
+				return nil, xerrors.Errorf("failed to send message to opencode: %w", err)
+			}
+		} else if s.conversation != nil {
+			// Use terminal-based agent
+			if err := s.conversation.SendMessage(FormatMessage(s.agentType, input.Body.Content)...); err != nil {
+				return nil, xerrors.Errorf("failed to send message: %w", err)
+			}
+		} else {
+			return nil, xerrors.Errorf("no agent available")
 		}
 	case MessageTypeRaw:
+		if s.agentType == mf.AgentTypeOpencode {
+			return nil, xerrors.Errorf("raw message type not supported for opencode")
+		}
+		if s.agentio == nil {
+			return nil, xerrors.Errorf("no terminal agent available")
+		}
 		if _, err := s.agentio.Write([]byte(input.Body.Content)); err != nil {
 			return nil, xerrors.Errorf("failed to send message: %w", err)
 		}
