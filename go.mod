@@ -16,6 +16,14 @@ require (
 )
 
 require (
+	github.com/sst/opencode-sdk-go v0.1.0-alpha.28 // indirect
+	github.com/tidwall/gjson v1.14.4 // indirect
+	github.com/tidwall/match v1.1.1 // indirect
+	github.com/tidwall/pretty v1.2.1 // indirect
+	github.com/tidwall/sjson v1.2.5 // indirect
+)
+
+require (
 	github.com/ActiveState/termtest/conpty v0.5.0 // indirect
 	github.com/ActiveState/vt10x v1.3.1 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20170929234023-d6e3b3328b78 // indirect
