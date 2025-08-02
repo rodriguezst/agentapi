@@ -49,7 +49,11 @@ func NewOpencodeClient(ctx context.Context, logger *slog.Logger) (*OpencodeClien
 
 // initSession initializes the opencode session
 func (oc *OpencodeClient) initSession(ctx context.Context) error {
-	_, err := oc.client.Session.Init(ctx, oc.sessionID, opencode.SessionInitParams{})
+	_, err := oc.client.Session.Init(ctx, oc.sessionID, opencode.SessionInitParams{
+		MessageID:  opencode.F("init_msg_001"),
+		ProviderID: opencode.F("mockgpt"),
+		ModelID:    opencode.F("gpt-3.5-turbo"),
+	})
 	if err != nil {
 		return err
 	}
@@ -87,6 +91,7 @@ func (oc *OpencodeClient) SendMessage(ctx context.Context, content string) error
 	oc.mu.Unlock()
 
 	// Send to opencode
+	oc.logger.Info("Sending message to opencode", "content", content)
 	_, err := oc.client.Session.Chat(ctx, oc.sessionID, opencode.SessionChatParams{
 		ModelID: opencode.F("gpt-3.5-turbo"), // Default model, could be configurable
 		ProviderID: opencode.F("mockgpt"), // Default provider, could be configurable
@@ -113,9 +118,14 @@ func (oc *OpencodeClient) SendMessage(ctx context.Context, content string) error
 		return err
 	}
 
+	// Add a small delay to allow the response to be processed
+	time.Sleep(1 * time.Second)
+
 	// Get the latest messages to find the response
+	oc.logger.Info("Getting session messages from opencode")
 	sessionMessages, err := oc.client.Session.Messages(ctx, oc.sessionID)
 	if err != nil {
+		oc.logger.Error("Error getting session messages", "error", err)
 		oc.status = st.ConversationStatusStable
 		oc.messages = append(oc.messages, st.ConversationMessage{
 			Id:      oc.getNextMessageIDUnsafe(),
@@ -128,16 +138,21 @@ func (oc *OpencodeClient) SendMessage(ctx context.Context, content string) error
 
 	// Find the assistant responses and add them as messages
 	if sessionMessages != nil {
-		for _, sessionMsg := range *sessionMessages {
+		oc.logger.Info("Processing session messages", "count", len(*sessionMessages))
+		for i, sessionMsg := range *sessionMessages {
+			oc.logger.Info("Session message", "index", i, "role", sessionMsg.Info.Role, "parts_count", len(sessionMsg.Parts))
 			if sessionMsg.Info.Role == opencode.MessageRoleAssistant {
 				var responseContent string
-				for _, part := range sessionMsg.Parts {
-					if part.Type == opencode.PartTypeText {
+				for j, part := range sessionMsg.Parts {
+					oc.logger.Info("Message part", "index", j, "type", part.Type, "text", part.Text)
+					// Capture all text content, not just text type
+					if part.Type == opencode.PartTypeText || part.Text != "" {
 						responseContent += part.Text
 					}
 				}
 
 				if responseContent != "" {
+					oc.logger.Info("Adding assistant response", "content", responseContent)
 					oc.messages = append(oc.messages, st.ConversationMessage{
 						Id:      oc.getNextMessageIDUnsafe(),
 						Role:    st.ConversationRoleAgent,
@@ -147,6 +162,8 @@ func (oc *OpencodeClient) SendMessage(ctx context.Context, content string) error
 				}
 			}
 		}
+	} else {
+		oc.logger.Warn("No session messages returned")
 	}
 
 	oc.status = st.ConversationStatusStable
