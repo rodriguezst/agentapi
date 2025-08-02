@@ -1,6 +1,6 @@
 # AgentAPI
 
-Control [Claude Code](https://github.com/anthropics/claude-code), [Goose](https://github.com/block/goose), [Aider](https://github.com/Aider-AI/aider), and [Codex](https://github.com/openai/codex) with an HTTP API.
+Control [Claude Code](https://github.com/anthropics/claude-code), [Goose](https://github.com/block/goose), [Aider](https://github.com/Aider-AI/aider), [Codex](https://github.com/openai/codex), and [Opencode](https://github.com/sst/opencode) with an HTTP API.
 
 ![agentapi-chat](https://github.com/user-attachments/assets/57032c9f-4146-4b66-b219-09e38ab7690d)
 
@@ -58,11 +58,38 @@ Run an HTTP server that lets you control an agent. If you'd like to start an age
 agentapi server -- claude --allowedTools "Bash(git*) Edit Replace"
 ```
 
-You may also use `agentapi` to run the Aider and Goose agents:
+You may also use `agentapi` to run the Aider, Goose, and Opencode agents:
 
 ```bash
 agentapi server -- aider --model sonnet --api-key anthropic=sk-ant-apio3-XXX
 agentapi server -- goose
+agentapi server -- opencode
+```
+
+For Opencode, ensure you have:
+1. Opencode installed and running in daemon mode
+2. Proper configuration in `~/.config/opencode/opencode.json`
+
+Example Opencode configuration:
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "theme": "opencode",
+  "model": "your-provider/your-model",
+  "provider": {
+    "your-provider": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "your-provider",
+      "options": {
+        "baseURL": "your-api-base-url",
+        "apiKey": "your-api-key"
+      },
+      "models": {
+        "your-model": {}
+      }
+    }
+  }
+}
 ```
 
 An OpenAPI schema is available in [openapi.json](openapi.json).

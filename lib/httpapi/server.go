@@ -93,7 +93,8 @@ func NewServer(ctx context.Context, agentType mf.AgentType, process *termexec.Pr
 		opencodeClient, err := NewOpencodeClient(ctx, logger)
 		if err != nil {
 			logger.Error("Failed to create opencode client", "error", err)
-			// Continue with nil client, will handle in message endpoints
+			logger.Warn("Opencode client unavailable - ensure opencode daemon is running")
+			// Continue with nil client, will provide helpful error in message endpoints
 		}
 		s.opencodeClient = opencodeClient
 	} else {
@@ -256,6 +257,8 @@ func (s *Server) createMessage(ctx context.Context, input *MessageRequest) (*Mes
 			if err := s.opencodeClient.SendMessage(ctx, input.Body.Content); err != nil {
 				return nil, xerrors.Errorf("failed to send message to opencode: %w", err)
 			}
+		} else if s.agentType == mf.AgentTypeOpencode && s.opencodeClient == nil {
+			return nil, xerrors.Errorf("opencode client unavailable - ensure opencode daemon is running and properly configured")
 		} else if s.conversation != nil {
 			// Use terminal-based agent
 			if err := s.conversation.SendMessage(FormatMessage(s.agentType, input.Body.Content)...); err != nil {
