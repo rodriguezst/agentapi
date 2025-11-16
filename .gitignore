@@ -7,6 +7,8 @@ schema.yaml
 **/.claude/settings.local.json
 out
 
+# Test binaries
+*.test
 
 #IDEs
 .idea
