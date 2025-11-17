@@ -191,7 +191,7 @@ export default function MessageInput({
 
   return (
     <Tabs value={inputMode} onValueChange={setInputMode}>
-      <div className="max-w-4xl mx-auto w-full p-4 pt-0">
+      <div className="max-w-4xl mx-auto w-full px-6 pb-6 pt-0">
         <DragDrop
           onFilesAdded={handleFilesAdded}
           disabled={disabled || inputMode === "control"}
@@ -204,7 +204,7 @@ export default function MessageInput({
             onChange={handleFileInputChange}
           />
           <form onSubmit={handleSubmit}
-                className={"rounded-lg border text-base shadow-sm placeholder:text-muted-foreground focus-within:outline-none focus-within:ring-1 focus-within:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"}>
+                className={"rounded-2xl border-2 text-base shadow-lg bg-background/95 backdrop-blur-sm placeholder:text-muted-foreground focus-within:outline-none focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/50 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm transition-all duration-200"}>
             <div className="flex flex-col">
               <div className="flex">
                 {inputMode === "control" && !disabled ? (
@@ -216,7 +216,7 @@ export default function MessageInput({
                     onKeyDown={handleKeyDown as any}
                     onFocus={() => setControlAreaFocused(true)}
                     onBlur={() => setControlAreaFocused(false)}
-                    className="cursor-text p-4 h-20 text-muted-foreground flex items-center justify-center w-full outline-none text-sm"
+                    className="cursor-text p-5 h-20 text-muted-foreground flex items-center justify-center w-full outline-none text-sm"
                   >
                     {controlAreaFocused
                       ? "Press any key to send to terminal (arrows, Ctrl+C, Ctrl+R, etc.)"
@@ -234,16 +234,17 @@ export default function MessageInput({
                         ? "Running..."
                         : "Type a message..."
                     }
-                    className="resize-none w-full text-sm outline-none p-4 h-20 max-h-[400px]"
+                    className="resize-none w-full text-sm outline-none p-5 h-20 max-h-[400px] bg-transparent"
                     disabled={serverStatus !== "stable"}
                   />
                 )}
               </div>
 
-              <div className="flex items-center justify-between p-4">
-                <TabsList className="bg-transparent">
+              <div className="flex items-center justify-between px-4 pb-3 pt-1 border-t border-border/50">
+                <TabsList className="bg-muted/50 h-9">
                   <TabsTrigger
                     value="text"
+                    className="text-xs"
                     onClick={() => {
                       textareaRef.current?.focus();
                     }}
@@ -252,6 +253,7 @@ export default function MessageInput({
                   </TabsTrigger>
                   <TabsTrigger
                     value="control"
+                    className="text-xs"
                     onClick={() => {
                       textareaRef.current?.focus();
                     }}
@@ -260,14 +262,15 @@ export default function MessageInput({
                   </TabsTrigger>
                 </TabsList>
 
-                <div className={"flex flex-row gap-3"}>
+                <div className={"flex flex-row gap-2"}>
                   <Button
-                    type="submit"
+                    type="button"
                     size="icon"
-                    className="rounded-full"
+                    variant="ghost"
+                    className="rounded-full h-9 w-9 hover:bg-muted"
                     onClick={handleUploadClick}
                   >
-                    <Upload/>
+                    <Upload className="h-4 w-4"/>
                     <span className="sr-only">Upload</span>
                   </Button>
 
@@ -276,23 +279,25 @@ export default function MessageInput({
                       type="submit"
                       disabled={disabled || !message.trim()}
                       size="icon"
-                      className="rounded-full"
+                      className="rounded-full h-9 w-9 shadow-sm"
                     >
-                      <SendIcon/>
+                      <SendIcon className="h-4 w-4"/>
                       <span className="sr-only">Send</span>
                     </Button>
                   )}
 
                   {inputMode === "text" && serverStatus === "running" && (
                     <Button
+                      type="button"
                       size="icon"
-                      className="rounded-full"
+                      variant="destructive"
+                      className="rounded-full h-9 w-9 shadow-sm"
                       disabled={disabled}
                       onClick={() => {
                         onSendMessage(specialKeys.Escape, "raw");
                       }}
                     >
-                      <Square/>
+                      <Square className="h-4 w-4"/>
                       <span className="sr-only">Stop</span>
                     </Button>
                   )}
@@ -302,7 +307,7 @@ export default function MessageInput({
                       {sentChars.map((char) => (
                         <span
                           key={char.id}
-                          className="min-w-9 h-9 px-2 rounded border font-mono font-medium text-xs flex items-center justify-center animate-pulse"
+                          className="min-w-9 h-9 px-2 rounded-lg border bg-muted/50 font-mono font-medium text-xs flex items-center justify-center animate-pulse"
                         >
                       <Char char={char.char}/>
                     </span>
@@ -316,17 +321,16 @@ export default function MessageInput({
           </form>
         </DragDrop>
 
-        <span className="text-xs text-muted-foreground mt-2 block text-center">
+        <p className="text-xs text-muted-foreground mt-3 text-center leading-relaxed">
           {inputMode === "text" ? (
             <>
-              Switch to <span className="font-medium">Control</span> mode to
-              send raw keystrokes (↑,↓,Tab,Ctrl+C,Ctrl+R) directly to the
-              terminal. Drag and drop files onto the input area to upload.
+              Switch to <span className="font-medium text-foreground">Control</span> mode to
+              send raw keystrokes directly to the terminal. Drag and drop files to upload.
             </>
           ) : (
-            <>Control mode - keystrokes sent directly to terminal</>
+            <>Control mode active — keystrokes sent directly to terminal</>
           )}
-        </span>
+        </p>
       </div>
     </Tabs>
   );
