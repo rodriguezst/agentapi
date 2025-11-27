@@ -126,7 +126,7 @@ export default function MessageList({messages}: MessageListProps) {
   return (
     <div className="overflow-y-auto flex-1" ref={setScrollAreaRef}>
       <div
-        className="p-4 flex flex-col gap-4 max-w-4xl mx-auto transition-all duration-300 ease-in-out min-h-0">
+        className="p-2 sm:p-3 md:p-4 flex flex-col gap-2 sm:gap-3 md:gap-4 max-w-4xl mx-auto transition-all duration-300 ease-in-out min-h-0">
         {messages.map((message, index) => (
           <div
             key={message.id ?? "draft"}
@@ -135,13 +135,13 @@ export default function MessageList({messages}: MessageListProps) {
             <div
               className={`inline-block rounded-lg ${
                 message.role === "user"
-                  ? "bg-accent-foreground rounded-lg max-w-[90%] px-4 py-3 text-accent"
-                  : "max-w-[80ch]"
+                  ? "bg-accent-foreground rounded-lg max-w-[85%] sm:max-w-[90%] px-3 py-2 sm:px-4 sm:py-3 text-accent"
+                  : "max-w-[100%] sm:max-w-[95%] md:max-w-[80ch]"
               } ${message.id === undefined ? "animate-pulse" : ""}`}
             >
               <div
-                className={`whitespace-pre-wrap break-words text-left text-xs md:text-sm leading-relaxed md:leading-normal ${
-                  message.role === "user" ? "" : "font-mono"
+                className={`whitespace-pre-wrap break-words text-left text-[13px] sm:text-sm leading-tight sm:leading-relaxed md:leading-normal ${
+                  message.role === "user" ? "font-sans" : "font-mono sm:font-mono"
                 }`}
               >
                 {message.role !== "user" && message.content === "" ? (

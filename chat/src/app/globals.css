@@ -120,3 +120,36 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Mobile-specific optimizations for message density */
+@media (max-width: 640px) {
+  /* Prevent zoom on iOS while maintaining readability */
+  body {
+    -webkit-text-size-adjust: 100%;
+    font-size: 16px;
+  }
+
+  /* Optimize touch targets */
+  button, [role="button"], .tab-trigger {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Compact but readable spacing */
+  .message-container {
+    padding: 8px;
+    gap: 8px;
+  }
+
+  /* Better line-height for small screens */
+  .message-text {
+    line-height: 1.4;
+  }
+
+  /* Smaller but still touchable control indicators */
+  .control-char {
+    font-size: 11px;
+    min-width: 28px;
+    min-height: 28px;
+  }
+}
