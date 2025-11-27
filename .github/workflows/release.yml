@@ -2,7 +2,7 @@ name: Build Release Binaries
 
 on:
   release:
-    types: [published]
+    types: [created, published, edited]
   push:
     branches: [ main ]
   workflow_dispatch:
@@ -16,8 +16,7 @@ on:
 jobs:
   build:
     name: Build Release Binaries
-    runs-on: depot-ubuntu-22.04-4
-    if: ${{ github.repository_owner == 'coder' }}
+    runs-on: ubuntu-24.04
 
     steps:
     - uses: actions/checkout@v4
