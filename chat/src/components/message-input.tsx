@@ -203,7 +203,7 @@ export default function MessageInput({
 
   return (
     <Tabs value={inputMode} onValueChange={setInputMode}>
-      <div className="max-w-4xl mx-auto w-full p-4 pt-0">
+      <div className="max-w-4xl mx-auto w-full p-2 sm:p-3 md:p-4 pt-0">
         <DragDrop
           onFilesAdded={handleFilesAdded}
           disabled={disabled || inputMode === "control"}
@@ -216,7 +216,7 @@ export default function MessageInput({
             onChange={handleFileInputChange}
           />
           <form onSubmit={handleSubmit}
-                className={"rounded-lg border text-base shadow-sm placeholder:text-muted-foreground focus-within:outline-none focus-within:ring-1 focus-within:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"}>
+                className={"rounded-lg border text-base shadow-sm placeholder:text-muted-foreground focus-within:outline-none focus-within:ring-1 focus-within:ring-ring disabled:cursor-not-allowed disabled:opacity-50 text-sm md:text-sm"}>
             <div className="flex flex-col">
               <div className="flex">
                 {inputMode === "control" && !disabled ? (
@@ -228,7 +228,7 @@ export default function MessageInput({
                     onKeyDown={handleKeyDown as any}
                     onFocus={() => setControlAreaFocused(true)}
                     onBlur={() => setControlAreaFocused(false)}
-                    className="cursor-text p-4 h-20 text-muted-foreground flex items-center justify-center w-full outline-none text-sm"
+                    className="cursor-text p-3 h-16 sm:p-4 sm:h-20 text-muted-foreground flex items-center justify-center w-full outline-none text-sm"
                   >
                     {controlAreaFocused
                       ? "Press any key to send to terminal (arrows, Ctrl+C, Ctrl+R, etc.)"
@@ -246,16 +246,17 @@ export default function MessageInput({
                         ? "Running..."
                         : "Type a message..."
                     }
-                    className="resize-none w-full text-sm outline-none p-4 h-20 max-h-[400px]"
+                    className="resize-none w-full text-sm outline-none p-3 h-16 sm:p-4 sm:h-20 max-h-[300px] sm:max-h-[400px]"
                     disabled={serverStatus !== "stable"}
                   />
                 )}
               </div>
 
-              <div className="flex items-center justify-between p-4">
+              <div className="flex items-center justify-between p-2 sm:p-3 md:p-4">
                 <TabsList className="bg-transparent">
                   <TabsTrigger
                     value="text"
+                    className="px-2 py-1 text-xs sm:px-3 sm:py-2 sm:text-sm"
                     onClick={() => {
                       textareaRef.current?.focus();
                     }}
@@ -264,6 +265,7 @@ export default function MessageInput({
                   </TabsTrigger>
                   <TabsTrigger
                     value="control"
+                    className="px-2 py-1 text-xs sm:px-3 sm:py-2 sm:text-sm"
                     onClick={() => {
                       textareaRef.current?.focus();
                     }}
@@ -272,15 +274,15 @@ export default function MessageInput({
                   </TabsTrigger>
                 </TabsList>
 
-                <div className={"flex flex-row gap-3"}>
+                <div className={"flex flex-row gap-2 sm:gap-3"}>
                   {serverStatus !== "running" && <Button
                       type="submit"
                       size="icon"
-                      className="rounded-full"
+                      className="h-8 w-8 sm:h-10 sm:w-10 rounded-full"
                       onClick={handleUploadClick}
                       title={"Upload File"}
                   >
-                      <Upload/>
+                      <Upload className="h-3 w-3 sm:h-4 sm:w-4"/>
                       <span className="sr-only">Upload</span>
                   </Button>
                   }
@@ -290,10 +292,10 @@ export default function MessageInput({
                       type="submit"
                       disabled={disabled || !message.trim()}
                       size="icon"
-                      className="rounded-full"
+                      className="h-8 w-8 sm:h-10 sm:w-10 rounded-full"
                       title={"Send Message"}
                     >
-                      <SendIcon/>
+                      <SendIcon className="h-3 w-3 sm:h-4 sm:w-4"/>
                       <span className="sr-only">Send</span>
                     </Button>
                   )}
@@ -301,14 +303,14 @@ export default function MessageInput({
                   {inputMode === "text" && serverStatus === "running" && (
                     <Button
                       size="icon"
-                      className="rounded-full"
+                      className="h-8 w-8 sm:h-10 sm:w-10 rounded-full"
                       disabled={disabled}
                       onClick={() => {
                         onSendMessage(specialKeys.Escape, "raw");
                       }}
                       title={"Interrupt"}
                     >
-                      <Square/>
+                      <Square className="h-3 w-3 sm:h-4 sm:w-4"/>
                       <span className="sr-only">Stop</span>
                     </Button>
                   )}
@@ -318,7 +320,7 @@ export default function MessageInput({
                       {sentChars.map((char) => (
                         <span
                           key={char.id}
-                          className="min-w-9 h-9 px-2 rounded border font-mono font-medium text-xs flex items-center justify-center animate-pulse"
+                          className="min-w-7 h-7 sm:min-w-9 sm:h-9 px-1.5 sm:px-2 rounded border font-mono font-medium text-xs flex items-center justify-center animate-pulse"
                         >
                       <Char char={char.char}/>
                     </span>
