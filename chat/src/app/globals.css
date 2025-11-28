@@ -135,6 +135,12 @@
     min-width: 44px;
   }
 
+  /* Prevent zoom on all input elements - iOS only zooms when font-size < 16px */
+  input, textarea, select {
+    font-size: 16px !important;
+    -webkit-text-size-adjust: 100% !important;
+  }
+
   /* Compact but readable spacing */
   .message-container {
     padding: 8px;
