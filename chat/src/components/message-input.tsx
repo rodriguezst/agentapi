@@ -125,17 +125,7 @@ export default function MessageInput({
     }
   }, [serverStatus, disabled, inputMode]);
 
-  // Manage mobile keyboard focus for control mode
-  useEffect(() => {
-    if (inputMode === "control" && !disabled && mobileKeyboardInputRef.current) {
-      // Focus the hidden input to trigger mobile keyboard
-      mobileKeyboardInputRef.current.focus();
-    } else if (inputMode === "text" && mobileKeyboardInputRef.current) {
-      // Blur the hidden input when switching back to text mode
-      mobileKeyboardInputRef.current.blur();
-    }
-  }, [inputMode, disabled]);
-
+  
   const addSentChar = (char: string) => {
     const newChar: SentChar = {
       char,
