@@ -62,6 +62,7 @@ export default function MessageInput({
   const nextCharId = useRef(0);
   const [controlAreaFocused, setControlAreaFocused] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const mobileKeyboardInputRef = useRef<HTMLInputElement>(null);
   const {uploadFiles} = useChat();
 
   const handleFilesAdded = async (files: File[]) => {
@@ -123,6 +124,17 @@ export default function MessageInput({
       textareaRef.current.focus();
     }
   }, [serverStatus, disabled, inputMode]);
+
+  // Manage mobile keyboard focus for control mode
+  useEffect(() => {
+    if (inputMode === "control" && !disabled && mobileKeyboardInputRef.current) {
+      // Focus the hidden input to trigger mobile keyboard
+      mobileKeyboardInputRef.current.focus();
+    } else if (inputMode === "text" && mobileKeyboardInputRef.current) {
+      // Blur the hidden input when switching back to text mode
+      mobileKeyboardInputRef.current.blur();
+    }
+  }, [inputMode, disabled]);
 
   const addSentChar = (char: string) => {
     const newChar: SentChar = {
@@ -220,19 +232,31 @@ export default function MessageInput({
             <div className="flex flex-col">
               <div className="flex">
                 {inputMode === "control" && !disabled ? (
-                  <div
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    ref={textareaRef as any}
-                    tabIndex={0}
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    onKeyDown={handleKeyDown as any}
-                    onFocus={() => setControlAreaFocused(true)}
-                    onBlur={() => setControlAreaFocused(false)}
-                    className="cursor-text p-3 h-16 sm:p-4 sm:h-20 text-muted-foreground flex items-center justify-center w-full outline-none text-sm"
-                  >
-                    {controlAreaFocused
-                      ? "Press any key to send to terminal (arrows, Ctrl+C, Ctrl+R, etc.)"
-                      : "Click or focus this area to send keystrokes to terminal"}
+                  <div className="relative">
+                    <input
+                      ref={mobileKeyboardInputRef}
+                      type="text"
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      onKeyDown={handleKeyDown as any}
+                      onFocus={() => setControlAreaFocused(true)}
+                      onBlur={() => setControlAreaFocused(false)}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-text outline-none"
+                      autoComplete="off"
+                      autoCorrect="off"
+                      autoCapitalize="off"
+                      spellCheck="false"
+                      aria-label="Control mode input for terminal keystrokes"
+                    />
+                    <div
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      ref={textareaRef as any}
+                      tabIndex={-1} // Make div not focusable via tab
+                      className="cursor-text p-3 h-16 sm:p-4 sm:h-20 text-muted-foreground flex items-center justify-center w-full outline-none text-sm pointer-events-none"
+                    >
+                      {controlAreaFocused
+                        ? "Press any key to send to terminal (arrows, Ctrl+C, Ctrl+R, etc.)"
+                        : "Click or focus this area to send keystrokes to terminal"}
+                    </div>
                   </div>
                 ) : (
                   <TextareaAutosize
@@ -267,7 +291,8 @@ export default function MessageInput({
                     value="control"
                     className="px-2 py-1 text-xs sm:px-3 sm:py-2 sm:text-sm"
                     onClick={() => {
-                      textareaRef.current?.focus();
+                      // Focus the hidden input for mobile keyboard when switching to control mode
+                      mobileKeyboardInputRef.current?.focus();
                     }}
                   >
                     Control
