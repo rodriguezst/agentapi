@@ -62,6 +62,7 @@ export default function MessageInput({
   const nextCharId = useRef(0);
   const [controlAreaFocused, setControlAreaFocused] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const mobileKeyboardInputRef = useRef<HTMLInputElement>(null);
   const {uploadFiles} = useChat();
 
   const handleFilesAdded = async (files: File[]) => {
@@ -220,19 +221,31 @@ export default function MessageInput({
             <div className="flex flex-col">
               <div className="flex">
                 {inputMode === "control" && !disabled ? (
-                  <div
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    ref={textareaRef as any}
-                    tabIndex={0}
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    onKeyDown={handleKeyDown as any}
-                    onFocus={() => setControlAreaFocused(true)}
-                    onBlur={() => setControlAreaFocused(false)}
-                    className="cursor-text p-4 h-20 text-muted-foreground flex items-center justify-center w-full outline-none text-sm"
-                  >
-                    {controlAreaFocused
-                      ? "Press any key to send to terminal (arrows, Ctrl+C, Ctrl+R, etc.)"
-                      : "Click or focus this area to send keystrokes to terminal"}
+                  <div className="relative w-full">
+                    <input
+                      ref={mobileKeyboardInputRef}
+                      type="text"
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      onKeyDown={handleKeyDown as any}
+                      onFocus={() => setControlAreaFocused(true)}
+                      onBlur={() => setControlAreaFocused(false)}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-text outline-none"
+                      autoComplete="off"
+                      autoCorrect="off"
+                      autoCapitalize="off"
+                      spellCheck="false"
+                      aria-label="Control mode input for terminal keystrokes"
+                    />
+                    <div
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      ref={textareaRef as any}
+                      tabIndex={-1}
+                      className="cursor-text p-4 h-20 text-muted-foreground flex items-center justify-center w-full outline-none text-sm pointer-events-none"
+                    >
+                      {controlAreaFocused
+                        ? "Press any key to send to terminal (arrows, Ctrl+C, Ctrl+R, etc.)"
+                        : "Click or focus this area to send keystrokes to terminal"}
+                    </div>
                   </div>
                 ) : (
                   <TextareaAutosize
@@ -265,7 +278,8 @@ export default function MessageInput({
                   <TabsTrigger
                     value="control"
                     onClick={() => {
-                      textareaRef.current?.focus();
+                      // Focus the hidden input for mobile keyboard when switching to control mode
+                      mobileKeyboardInputRef.current?.focus();
                     }}
                   >
                     Control
